@@ -9,7 +9,8 @@
     "postal_code": "78701",
     "country": "US",
     "latitude": 30.2672,
-    "longitude": -97.7431
+    "longitude": -97.7431,
+    "service_radius_miles": 25.0
   },
   "website": "https://austinemergencydental.example.com",
   "services": [
@@ -18,21 +19,24 @@
       "category": "Endodontics",
       "price_range": "$900 - $1,500",
       "turnaround": "Same Day Immediate",
-      "key_entities": ["Pulpitis", "Dental Nerve Pain", "Endodontic Therapy"]
+      "key_entities": ["Pulpitis", "Dental Nerve Pain", "Endodontic Therapy"],
+      "wikidata_id": "Q134102"
     },
     {
       "name": "Tooth Extraction",
       "category": "Oral Surgery",
       "price_range": "$250 - $450",
       "turnaround": "Same Day Walk-In",
-      "key_entities": ["Wisdom Tooth", "Emergency Extraction"]
+      "key_entities": ["Wisdom Tooth", "Emergency Extraction"],
+      "wikidata_id": "Q212629"
     },
     {
       "name": "Dental Crown Repair",
       "category": "Prosthodontics",
       "price_range": "$800 - $1,200",
       "turnaround": "24 to 48 Hours",
-      "key_entities": ["Ceramic Crown", "Broken Tooth Restoration"]
+      "key_entities": ["Ceramic Crown", "Broken Tooth Restoration"],
+      "wikidata_id": "Q143527"
     }
   ],
   "same_as": [
@@ -42,5 +46,14 @@
   "verified_certifications": [
     "Texas State Board of Dental Examiners (TSBDE)",
     "American Dental Association (ADA) Member"
+  ],
+  "opening_hours": [
+    "Mo-Su 00:00-24:00"
+  ],
+  "knows_about": [
+    "Emergency Dentistry",
+    "Endodontics",
+    "Oral Surgery",
+    "Dental Trauma"
   ]
 }

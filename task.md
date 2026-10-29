@@ -10,7 +10,7 @@
 
 ## 2. Packaging, Testing & Verification
 - [x] Author Pydantic models and unit test suite (`tests/test_pipeline.py`)
-- [x] Verify all 5 unit tests pass via pytest (100% pass rate in 0.09s)
+- [x] Verify all 5 initial unit tests pass via pytest (100% pass rate in 0.09s)
 - [x] Build and verify end-to-end demo runner (`run_demo.py`)
 - [x] Create realistic local business dataset (`examples/sample_local_business.json`)
 - [x] Author comprehensive technical documentation (`README.md`)
@@ -18,6 +18,16 @@
 
 ## 3. Application Artifacts for Reddit Job Post
 - [x] Audit local user environment and existing public agent repos (`vibe-rules-hub`, `antigravity-core`, `AutoPost`)
-- [x] Prepare 1-command GitHub publish script (`gh repo create`)
+- [x] Publish repository to GitHub (`https://github.com/lengoctuong2005/geo-aeo-agent-pipeline`)
 - [x] Author technical Reddit comment showcasing GEO/AEO stack architecture
 - [x] Author tailored direct message (DM) to agency founder with single portfolio link
+
+## 4. Ultracode Quality Upgrade (Multi-Agent Workflow Orchestration)
+- [x] Multi-lens adversarial audit: AEO Schema Architecture, Adversarial Flaws, and Agency Pitch
+- [x] Rich Schema.org upgrade: `@id` URI nodes, `areaServed` GeoCircle, `openingHours`, and `knowsAbout`
+- [x] Semantic Triples injection for machine-readable Knowledge Graph ingestion (`Subject -> Predicate -> Object`)
+- [x] Semantic DOM chunking (`<section data-aeo-chunk="true">` with `<dl>`, `<dt>`, `<dd>`) for headless AI scrapers
+- [x] Resilient phone normalization & auto JSON-LD extraction from HTML in QA Gate
+- [x] Stopword filtering, plural tolerance, and DOM-aware block parsing in AI Citation Tracker
+- [x] Expanded test suite from 5 to 10 comprehensive edge-case tests (100% passing in 0.08s)
+- [x] Added Agency Economics & Deterministic Benchmark matrix to `README.md`

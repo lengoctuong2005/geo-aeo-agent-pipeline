@@ -19,3 +19,7 @@ dev = [
 
 [project.scripts]
 geo-aeo = "geo_aeo.cli:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

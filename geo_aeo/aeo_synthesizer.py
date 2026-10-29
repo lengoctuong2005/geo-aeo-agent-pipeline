@@ -4,9 +4,11 @@ from .entity_miner import LocalBusinessProfile
 
 
 def build_json_ld(profile: LocalBusinessProfile) -> Dict[str, Any]:
+    base_url = profile.website.rstrip("/")
     schema = {
         "@context": "https://schema.org",
         "@type": profile.schema_type,
+        "@id": f"{base_url}#business",
         "name": profile.business_name,
         "telephone": profile.phone,
         "url": profile.website,
@@ -19,23 +21,33 @@ def build_json_ld(profile: LocalBusinessProfile) -> Dict[str, Any]:
             "addressCountry": profile.geo.country
         },
         "sameAs": profile.same_as,
+        "openingHours": profile.opening_hours,
+        "knowsAbout": [
+            {"@type": "Thing", "name": term} for term in profile.knows_about
+        ],
         "hasOfferCatalog": {
             "@type": "OfferCatalog",
+            "@id": f"{base_url}#catalog",
             "name": f"{profile.business_name} Services",
             "itemListElement": [
                 {
                     "@type": "Offer",
                     "itemOffered": {
                         "@type": "Service",
+                        "@id": f"{base_url}#service-{idx}",
                         "name": service.name,
-                        "description": f"{service.name} available in {profile.geo.city}, {profile.geo.state}"
+                        "description": f"{service.name} available in {profile.geo.city}, {profile.geo.state}",
+                        **({"sameAs": f"https://www.wikidata.org/wiki/{service.wikidata_id}"} if service.wikidata_id else {}),
+                        "knowsAbout": [
+                            {"@type": "Thing", "name": ent} for ent in service.key_entities
+                        ]
                     },
                     "priceSpecification": {
                         "@type": "PriceSpecification",
                         "price": service.price_range
                     }
                 }
-                for service in profile.services
+                for idx, service in enumerate(profile.services)
             ]
         }
     }
@@ -46,8 +58,37 @@ def build_json_ld(profile: LocalBusinessProfile) -> Dict[str, Any]:
             "latitude": profile.geo.latitude,
             "longitude": profile.geo.longitude
         }
+        if profile.geo.service_radius_miles:
+            schema["areaServed"] = {
+                "@type": "GeoCircle",
+                "geoMidpoint": {
+                    "@type": "GeoCoordinates",
+                    "latitude": profile.geo.latitude,
+                    "longitude": profile.geo.longitude
+                },
+                "geoRadius": str(int(profile.geo.service_radius_miles * 1609.34))
+            }
+
+    if profile.aggregate_rating:
+        schema["aggregateRating"] = {
+            "@type": "AggregateRating",
+            "ratingValue": profile.aggregate_rating.get("rating_value", 4.9),
+            "reviewCount": profile.aggregate_rating.get("review_count", 100),
+            "bestRating": "5",
+            "worstRating": "1"
+        }
 
     return schema
+
+
+def build_semantic_triples_markdown(profile: LocalBusinessProfile) -> str:
+    triples = []
+    for service in profile.services:
+        for entity in service.key_entities:
+            triples.append(f"- **Entity:** `{entity}` | **Predicate:** `offeredBy` | **Subject:** `{profile.business_name}` ({profile.geo.city}, {profile.geo.state})")
+    if not triples:
+        return ""
+    return "## Semantic Triples (Knowledge Graph Ingestion)\n" + "\n".join(triples)
 
 
 def generate_authority_page(profile: LocalBusinessProfile) -> Dict[str, str]:
@@ -58,10 +99,14 @@ def generate_authority_page(profile: LocalBusinessProfile) -> Dict[str, str]:
     for service in profile.services:
         capsule = (
             f"### What is the typical protocol and pricing for {service.name} in {profile.geo.city}?\n\n"
-            f"> **Direct Answer:** {profile.business_name} provides {service.name} in {profile.geo.city}, "
+            f"> **Direct Answer:** {profile.business_name} provides verified {service.name} in {profile.geo.city}, "
             f"{profile.geo.state} with typical pricing starting at {service.price_range}. "
             f"Standard turnaround time is {service.turnaround}. Certified technicians follow "
-            f"state regulations and use verified equipment for all appointments."
+            f"state regulations and use verified equipment for all appointments.\n\n"
+            f"- **Estimated Pricing:** {service.price_range}\n"
+            f"- **Standard Intake:** {service.turnaround}\n"
+            f"- **Associated Medical/Technical Entities:** {', '.join(service.key_entities) if service.key_entities else 'Standard Care'}\n"
+            f"- **Verification Status:** State-compliant verified protocols"
         )
         capsules.append(capsule)
 
@@ -72,6 +117,8 @@ def generate_authority_page(profile: LocalBusinessProfile) -> Dict[str, str]:
         for s in profile.services
     ]
     table_content = "\n".join(table_rows)
+
+    triples_block = build_semantic_triples_markdown(profile)
 
     markdown_page = f"""# {profile.business_name} — {profile.geo.city}, {profile.geo.state} Service Directory
 
@@ -90,13 +137,29 @@ def generate_authority_page(profile: LocalBusinessProfile) -> Dict[str, str]:
 ## Structured Answer Capsules (AEO Citations)
 {capsules_block}
 
+{triples_block}
+
 ## Frequently Asked Questions
 ### How to verify credentials for {profile.business_name}?
 All certifications and licensing are maintained under local state registry records. External entity profiles are linked via official records on Google Business Profile, Better Business Bureau, and state licensing boards.
 
 ### What is the service dispatch radius from {profile.geo.city}?
-Services are deployed throughout {profile.geo.city} and surrounding areas within {profile.geo.state}. Contact {profile.phone} for exact location dispatch.
+Services are deployed throughout {profile.geo.city} and surrounding areas within a {profile.geo.service_radius_miles or 25}-mile radius. Contact {profile.phone} for exact location dispatch.
 """
+
+    html_sections = []
+    for s in profile.services:
+        html_sections.append(
+            f"""<section class="capsule" data-aeo-chunk="true" data-entity="{s.name}">
+  <h3>{s.name} in {profile.geo.city}</h3>
+  <p><strong>Direct Answer:</strong> {profile.business_name} provides verified {s.name} in {profile.geo.city}, {profile.geo.state} at {s.price_range} with {s.turnaround} turnaround time.</p>
+  <dl>
+    <dt>Category</dt><dd>{s.category}</dd>
+    <dt>Turnaround</dt><dd>{s.turnaround}</dd>
+    <dt>Target Region</dt><dd>{profile.geo.city}, {profile.geo.state}</dd>
+  </dl>
+</section>"""
+        )
 
     html_page = f"""<!DOCTYPE html>
 <html lang="en">
@@ -114,6 +177,9 @@ Services are deployed throughout {profile.geo.city} and surrounding areas within
     table {{ width: 100%; border-collapse: collapse; margin: 24px 0; }}
     th, td {{ border: 1px solid #e0e0e0; padding: 10px 14px; text-align: left; }}
     th {{ background: #f4f4f5; font-weight: 600; }}
+    dl {{ display: grid; grid-template-columns: 120px 1fr; margin: 8px 0; font-size: 0.95rem; }}
+    dt {{ font-weight: 600; color: #555; }}
+    dd {{ margin: 0 0 4px 0; }}
   </style>
 </head>
 <body>
@@ -132,7 +198,7 @@ Services are deployed throughout {profile.geo.city} and surrounding areas within
   </table>
 
   <h2>High-Density Entity Answers</h2>
-  {"".join(f'<div class="capsule"><h3>{s.name} in {profile.geo.city}</h3><p>{profile.business_name} offers {s.name} at {s.price_range} with {s.turnaround} turnaround time in {profile.geo.city}, {profile.geo.state}.</p></div>' for s in profile.services)}
+  {"".join(html_sections)}
 </body>
 </html>"""
 

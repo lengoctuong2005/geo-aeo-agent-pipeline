@@ -25,6 +25,26 @@ class QAResult(BaseModel):
     metrics: Dict[str, Any] = Field(default_factory=dict)
 
 
+def extract_schema_from_input(schema_input: str) -> Dict[str, Any]:
+    schema_clean = schema_input.strip()
+    if "<script" in schema_clean:
+        match = re.search(r'<script[^>]*type=[\'"]application/ld\+json[\'"][^>]*>(.*?)</script>', schema_clean, re.DOTALL)
+        if match:
+            schema_clean = match.group(1).strip()
+    return json.loads(schema_clean)
+
+
+def check_phone_presence(expected_phone: str, content: str) -> bool:
+    digits = re.sub(r"[^0-9]", "", expected_phone)
+    if not digits:
+        return True
+    national_10 = digits[-10:] if len(digits) >= 10 else digits
+    if national_10 in content:
+        return True
+    pattern = rf"\(?{national_10[:3]}\)?[-.\s]?{national_10[3:6]}[-.\s]?{national_10[6:]}"
+    return bool(re.search(pattern, content))
+
+
 def validate_aeo_readiness(
     content: str,
     schema_json: str,
@@ -36,7 +56,7 @@ def validate_aeo_readiness(
     score = 100
 
     try:
-        parsed_schema = json.loads(schema_json)
+        parsed_schema = extract_schema_from_input(schema_json)
         if parsed_schema.get("@context") != "https://schema.org":
             findings.append("Schema error: @context must be https://schema.org")
             score -= 15
@@ -66,9 +86,7 @@ def validate_aeo_readiness(
         findings.append(f"NAP Inconsistency: Business name '{expected_name}' not found in body")
         score -= 15
 
-    cleaned_phone = re.sub(r"[^0-9]", "", expected_phone)
-    cleaned_content = re.sub(r"[^0-9]", "", content)
-    if cleaned_phone and cleaned_phone not in cleaned_content:
+    if not check_phone_presence(expected_phone, content):
         findings.append(f"NAP Inconsistency: Phone number '{expected_phone}' missing or mismatched")
         score -= 15
 
@@ -76,12 +94,12 @@ def validate_aeo_readiness(
         findings.append(f"GEO Inconsistency: Target city '{expected_city}' missing in content")
         score -= 10
 
-    has_table = ("|" in content and "---" in content) or ("<table" in content.lower())
+    has_table = ("|" in content and "---" in content) or ("<table" in lower_content)
     if not has_table:
         findings.append("AEO Penalty: Missing structured comparison table for entity extraction")
         score -= 15
 
-    has_direct_answer = ("> **direct answer:**" in lower_content) or ("class=\"capsule\"" in lower_content)
+    has_direct_answer = bool(re.search(r"(>\s*\*\*direct answer:\*\*|data-aeo-chunk|class=[\"']capsule[\"'])", content, re.IGNORECASE))
     if not has_direct_answer:
         findings.append("AEO Penalty: Missing high-density direct answer capsule")
         score -= 15

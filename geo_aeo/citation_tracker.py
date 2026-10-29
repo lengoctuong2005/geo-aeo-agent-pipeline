@@ -3,6 +3,13 @@ from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 
 
+STOPWORDS = {
+    "in", "for", "the", "and", "who", "where", "can", "does",
+    "with", "near", "what", "best", "get", "how", "much", "is",
+    "a", "an", "to", "of", "are"
+}
+
+
 class CitationAuditResult(BaseModel):
     query: str
     citation_score: int
@@ -10,6 +17,22 @@ class CitationAuditResult(BaseModel):
     matched_anchor: str
     missing_entities: List[str] = Field(default_factory=list)
     actionable_fixes: List[str] = Field(default_factory=list)
+
+
+def normalize_entity(name: str) -> str:
+    cleaned = name.lower().strip()
+    if cleaned.endswith("ies"):
+        return cleaned[:-3] + "y"
+    if cleaned.endswith("s") and len(cleaned) > 3:
+        return cleaned[:-1]
+    return cleaned
+
+
+def entity_present(entity: str, text: str) -> bool:
+    norm_ent = normalize_entity(entity)
+    if entity.lower() in text or norm_ent in text:
+        return True
+    return False
 
 
 def audit_citation_readiness(
@@ -23,9 +46,13 @@ def audit_citation_readiness(
     matched_anchor = ""
 
     lower_content = content.lower()
-    query_tokens = [w for w in re.findall(r"\w+", target_query.lower()) if len(w) > 2]
+    all_tokens = re.findall(r"\w+", target_query.lower())
+    query_tokens = [w for w in all_tokens if len(w) > 2 and w not in STOPWORDS]
 
-    matched_tokens = [t for t in query_tokens if t in lower_content]
+    if not query_tokens:
+        query_tokens = [w for w in all_tokens if len(w) > 2]
+
+    matched_tokens = [t for t in query_tokens if normalize_entity(t) in lower_content]
     coverage_ratio = len(matched_tokens) / len(query_tokens) if query_tokens else 1.0
 
     if coverage_ratio < 0.7:
@@ -33,18 +60,25 @@ def audit_citation_readiness(
         fixes.append(f"Query keyword coverage is only {int(coverage_ratio * 100)}%. Inject exact query match in H2 or H3.")
 
     for entity in required_entities:
-        if entity.lower() not in lower_content:
+        if not entity_present(entity, lower_content):
             missing.append(entity)
             score -= 10
             fixes.append(f"Entity '{entity}' not indexed on page. Perplexity will miss citation.")
 
     has_capsule = False
-    paragraphs = re.split(r"\n\s*\n", content)
-    for p in paragraphs:
-        p_lower = p.lower()
-        if ("> **direct answer:**" in p_lower or "class=\"capsule\"" in p_lower) and any(t in p_lower for t in query_tokens):
+    chunks = re.split(r"(?:\n\s*\n|</(?:section|article|div|p)>)", content, flags=re.IGNORECASE)
+    for chunk in chunks:
+        c_lower = chunk.lower()
+        is_capsule_marker = (
+            "> **direct answer:**" in c_lower or
+            "<strong>direct answer:</strong>" in c_lower or
+            "data-aeo-chunk" in c_lower or
+            "class=\"capsule\"" in c_lower
+        )
+        if is_capsule_marker and any(normalize_entity(t) in c_lower for t in query_tokens):
             has_capsule = True
-            matched_anchor = p.strip()[:160] + "..."
+            cleaned_anchor = re.sub(r"<[^>]+>", " ", chunk).strip()
+            matched_anchor = cleaned_anchor[:160] + "..." if len(cleaned_anchor) > 160 else cleaned_anchor
             break
 
     if not has_capsule:
