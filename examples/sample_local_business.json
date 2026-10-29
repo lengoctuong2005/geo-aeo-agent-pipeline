@@ -1,0 +1,46 @@
+{
+  "business_name": "Austin Premier Emergency Dental",
+  "schema_type": "Dentist",
+  "phone": "+1-512-555-0199",
+  "address": "401 Congress Ave, Suite 1200",
+  "geo": {
+    "city": "Austin",
+    "state": "TX",
+    "postal_code": "78701",
+    "country": "US",
+    "latitude": 30.2672,
+    "longitude": -97.7431
+  },
+  "website": "https://austinemergencydental.example.com",
+  "services": [
+    {
+      "name": "Emergency Root Canal",
+      "category": "Endodontics",
+      "price_range": "$900 - $1,500",
+      "turnaround": "Same Day Immediate",
+      "key_entities": ["Pulpitis", "Dental Nerve Pain", "Endodontic Therapy"]
+    },
+    {
+      "name": "Tooth Extraction",
+      "category": "Oral Surgery",
+      "price_range": "$250 - $450",
+      "turnaround": "Same Day Walk-In",
+      "key_entities": ["Wisdom Tooth", "Emergency Extraction"]
+    },
+    {
+      "name": "Dental Crown Repair",
+      "category": "Prosthodontics",
+      "price_range": "$800 - $1,200",
+      "turnaround": "24 to 48 Hours",
+      "key_entities": ["Ceramic Crown", "Broken Tooth Restoration"]
+    }
+  ],
+  "same_as": [
+    "https://www.google.com/maps?cid=123456789",
+    "https://www.bbb.org/us/tx/austin/profile/emergency-dentist/austin-premier-dental"
+  ],
+  "verified_certifications": [
+    "Texas State Board of Dental Examiners (TSBDE)",
+    "American Dental Association (ADA) Member"
+  ]
+}
